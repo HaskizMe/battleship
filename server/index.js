@@ -1,5 +1,5 @@
 let gameState = {
-    currentTurn: "",
+    currentPlayer: null,
     players: []
 }
 
@@ -56,23 +56,17 @@ function generateRandomShipBoard() {
     return board;
 }
 
-function sendMessageToAll(webSocketServer, message) {
+function sendMessageToAll({ webSocketServer, ...payload }) {
     webSocketServer.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({
-            type: "broadcast",
-            message: `${message}`
-          }));
+          client.send(JSON.stringify(payload));
         }
       });
 }
 
-function sendMessageToPlayer(webSocket, type, message){
-    webSocket.send(JSON.stringify({
-        type: type,
-        message: message
-    }));
-}
+function sendMessageToPlayer({ ws, ...payload }) {
+    ws.send(JSON.stringify(payload));
+  }
 
 const WebSocket = require("ws");
 
@@ -83,52 +77,89 @@ console.log("WebSocket server is running on ws://localhost:8080");
 
 wss.on("connection", (ws) => {
     if (gameState.players.length < 2) {
-        const playerNum = gameState.players.length + 1;
-
+        const usedNumbers = gameState.players.map(p => p.playerNumber);
+        const availableNumbers = [1, 2].filter(n => !usedNumbers.includes(n));
+        const playerNum = availableNumbers[0];
+    
         gameState.players.push({
-            playerNumber: playerNum,
-            ws: ws
+          playerNumber: playerNum,
+          ready: false,
+          ws: ws
         });
-
+    
         console.log(`Player: ${playerNum} connected`);
-
-        sendMessageToPlayer(ws, "welcome", `Welcome ${playerNum}`);
-
+    
+        sendMessageToPlayer({
+          ws: ws,
+          type: "welcome",
+          message: `You're player ${playerNum}`,
+          player: playerNum,
+        });
+    
         if (gameState.players.length === 2) {
-            sendMessageToAll(wss, "Game ready to start!");
+          sendMessageToAll({
+            webSocketServer: wss,
+            type: "ready",
+            message: "Ready up"
+          });
         } else {
-            sendMessageToPlayer(ws, "waiting", "Waiting for 1 more player...");
+          sendMessageToPlayer({
+            ws: ws,
+            type: "waiting",
+            message: "Waiting for 1 more player...",
+          });
         }
-
-    } else {
+      } else {
         ws.send(JSON.stringify({ type: "error", message: "Game is full" }));
         ws.close();
-    }
+      }
 
     // This is called when a message is received
     ws.on("message", (message) => {
-        const sender = gameState.players.find(p => p.ws === ws);
-        const recipient = gameState.players.find(p => p.ws !== ws);
-        sendMessageToPlayer(recipient.ws, "message", message);
-
-
         try {
+            const sender = gameState.players.find(p => p.ws === ws);
+            const recipient = gameState.players.find(p => p.ws !== ws);
+
             const data = JSON.parse(message);
         
+            // Gets called when the user presses the 'Randomize Ships' button
             if (data.type === "randomize") {
               console.log(`Randomizing ships for Player ${sender.playerNumber}`);
               const shipPlacement = generateRandomShipBoard();
               sender.shipBoard = shipPlacement;
         
-              // Optionally send back confirmation
-              sendMessageToPlayer(ws, "shipPlacement", shipPlacement);
+              // send back to sender
+              sendMessageToPlayer({
+                ws: ws,
+                type: "shipPlacement",
+                message: shipPlacement,
+              });
             }
-        
-            // Add other message types here...
-        
-          } catch (err) {
+            // Gets called if the user presses the ready button 
+            else if(data.type === 'ready'){
+                sender.ready = data.message;
+                sendMessageToPlayer({
+                    ws: ws,
+                    type: "ready",
+                    message: `Waiting for player ${recipient.playerNumber}....`
+                });
+                // If both people are ready then we will start the game and choose a player at random to start
+                if (sender.ready && recipient.ready) {
+                    const startingPlayerNumber = Math.random() < 0.5 ? 1 : 2;
+                    gameState.currentPlayer = startingPlayerNumber;
+                  
+                    sendMessageToAll({
+                      webSocketServer: wss, 
+                      type: "start",
+                      message: `Game ready to start! Player ${startingPlayerNumber} goes first.`,
+                      currentPlayer: startingPlayerNumber
+                    });
+                  }
+            }
+            
+        } catch (err) {
             console.error("Invalid message received:", message);
-          }
+        }
 
     });
 
