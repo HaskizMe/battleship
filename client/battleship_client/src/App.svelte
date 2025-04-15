@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
 
-  let input = '';
+  let player = { number: null, isMyTurn: false};
   let socket;
 
   let gridSize = 10;
@@ -12,6 +12,8 @@
 
   // Tracks the opponent's hits/misses on your board
   let yourBoardStates = {}; // { index: 'hit' | 'miss' }
+  let status = ''
+  let currentPlayer = null;
 
   onMount(() => {
     socket = new WebSocket("ws://localhost:8080");
@@ -32,6 +34,19 @@
           });
         });
         yourBoardStates = { ...yourBoardStates, ...flatBoard };
+      } else if(["ready", "waiting"].includes(data.type)){
+        status = data.message;
+      } else if(data.type === "welcome"){
+        player.number = data.player
+      } else if(data.type === "start"){
+        status = data.message;
+        if(player.number === data.currentPlayer){
+          player.isMyTurn = true;
+          status = "My Turn";
+        } else {
+          player.isMyTurn = false;
+          status = "Waiting for other player";
+        }
       }
 
       // Handle other messages like hits/misses/etc. here
@@ -47,13 +62,28 @@
     // socket.send(JSON.stringify({ type: 'attack', index }));
   }
 
+  function handleStartGame() {
+    if (Object.keys(yourBoardStates).length === 0) {
+      alert("ERROR: Please setup your board before readying up. Press 'Randomize Ships' first");
+    } else {
+      socket.send(JSON.stringify({
+        type: "ready",
+        player: 1,
+        message: true
+      }));
+    }
+  } 
+
   function handleBattleshipSetup(){
+    yourBoardStates = {};
     socket.send(JSON.stringify({
       type: "randomize"
     }));
   }
 </script>
 
+<h3>You're player {player.number}</h3>
+<h1>{status}</h1>
 <div class="board-wrapper">
   <div class="board">
     <h2>Enemy Board</h2>
@@ -88,10 +118,10 @@
       </button>
       {/each}
     </div>
-    <button class="randomize-btn" on:click={() => handleBattleshipSetup()}>Randomize ships</button>
+    <button class="randomize-btn" on:click={() => handleBattleshipSetup()}>Randomize Ships</button>
   </div>
 </div>
-<button class="start-game-btn">Start Game</button>
+<button class="start-game-btn" on:click={() => handleStartGame()}>Start Game</button>
 
 
 <style>
@@ -131,6 +161,8 @@
   }
 
   .start-game-btn{
+    width: 200px;
+    height: 60px;
     background-color: green;
   }
 
