@@ -1,0 +1,113 @@
+.board-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 40px;
+    margin-top: 20px;
+    padding: 20px;
+  }
+
+  .board h2 {
+    margin: 0 0 10px 0;
+    font-size: 20px;
+    text-align: center;
+    color: white;
+  }
+
+  .grid-with-labels {
+    display: grid;
+    grid-template-columns: repeat(11, 60px);
+    grid-template-rows: repeat(11, 60px);
+    gap: 4px;
+    align-items: center;
+    justify-items: center;
+  }
+
+  .grid-with-labels-your {
+    display: grid;
+    grid-template-columns: repeat(11, 40px);
+    grid-template-rows: repeat(11, 40px);
+    gap: 4px;
+    align-items: center;
+    justify-items: center;
+  }
+
+  .label {
+    font-weight: bold;
+    color: white;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .label.empty {
+    background: transparent;
+  }
+
+  .column-label,
+  .row-label {
+    background: transparent;
+  }
+
+  .randomize-btn {
+    margin: 10px;
+    background-color: #c81b0f;
+  }
+
+  .start-game-btn {
+    width: 200px;
+    height: 60px;
+    background-color: green;
+  }
+
+  .randomize-btn:hover {
+    border-color: white;
+  }
+
+  .cell, .cell-your {
+    background-color: #1e90ff;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #333;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 0;
+  }
+
+  .cell-your.carrier {
+    background-color: red;
+  }
+  .cell-your.destroyer {
+    background-color: green;
+  }
+  .cell-your.battleship {
+    background-color: purple;
+  }
+  .cell-your.cruiser {
+    background-color: yellow;
+  }
+  .cell-your.submarine {
+    background-color: orange;
+  }
+
+  .cell:disabled,
+  .cell-your:disabled {
+    cursor: not-allowed;
+  }
+
+  .cell:hover {
+    background-color: #4682b4;
+  }
+
+  .cell.hit,
+  .cell-your.hit {
+    background-color: #ff4c4c;
+  }
+
+  .cell.miss,
+  .cell-your.miss {
+    background-color: #626762;
+  }
