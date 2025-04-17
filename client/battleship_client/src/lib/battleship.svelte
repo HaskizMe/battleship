@@ -24,6 +24,7 @@
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
+      // Called when the server sends a shipPlactement message and we flatten the array and store it in yourBoardStates
       if (data.type === 'shipPlacement') {
         // Flatten 2D board into yourBoardStates
         let flatBoard = {};
@@ -37,15 +38,22 @@
           });
         });
         yourBoardStates = { ...yourBoardStates, ...flatBoard };
-      } else if(["ready", "waiting"].includes(data.type)){
+      }
+      // Called when ready or waiting message received from server 
+      else if(["ready", "waiting"].includes(data.type)){
         gameState = data.gameState;
         status = data.message;
-      } else if(data.type === "welcome"){
+      }
+      // Called when the server sends a message to welcome player 
+      else if(data.type === "welcome"){
         gameState = data.gameState;
         player.number = data.player
-      } else if(data.type === "start"){
+      }
+      // Start game logic 
+      else if(data.type === "start"){
         gameState = data.gameState;
         status = data.message;
+        // Checks to see who's turn it is
         if(player.number === data.currentPlayer){
           player.isMyTurn = true;
           status = "My Turn";
@@ -53,7 +61,9 @@
           player.isMyTurn = false;
           status = "Waiting for other player";
         }
-      } else if (data.type === "attackResult") {
+      } 
+      // Response from server on the attack result
+      else if (data.type === "attackResult") {
           // Player attacked was me
           if (data.player !== player.number) {
             yourBoardStates[data.position] = data.result;

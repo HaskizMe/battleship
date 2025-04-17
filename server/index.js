@@ -1,9 +1,11 @@
+// Game state for the game
 let gameState = {
     currentPlayer: null,
     players: [],
     gameStatus: "waiting",
 }
 
+// Function to generate a random ship board
 function generateRandomShipBoard() {
     const gridSize = 10;
     const board = Array.from({ length: gridSize }, () => Array(gridSize).fill(null));
@@ -57,7 +59,7 @@ function generateRandomShipBoard() {
     return board;
 }
 
-
+// This is called when a player presses the randomize button and it calls the helper function and then sends the message to the client
 function handleRandomizeBoard(ws, sender) {
   console.log(`Randomizing ships for Player ${sender.playerNumber}`);
   const shipPlacement = generateRandomShipBoard();
@@ -70,10 +72,9 @@ function handleRandomizeBoard(ws, sender) {
     type: "shipPlacement",
     message: shipPlacement,
   });
-
-  //console.log(`Ship placement for Player ${sender.playerNumber}:`, shipPlacement);
 }
 
+// This is called when a player presses the ready button and it checks if both players are ready
 function handleReadyUp(ws, sender, recipient) {
   gameState.gameStatus = "waiting";
   sender.ready = true;
@@ -101,6 +102,7 @@ function handleReadyUp(ws, sender, recipient) {
   }
 }
 
+// This function checks if all ships are sunk and if game is over
 function checkAllShipsSunk(board) {
   for (let row of board) {
     for (let cell of row) {
@@ -112,6 +114,7 @@ function checkAllShipsSunk(board) {
   return true; // all ships are hit
 }
 
+// This function handles the attack logic
 function handleAttack(ws, sender, recipient, data) {
   gameState.gameStatus = "playing";
 
@@ -124,7 +127,6 @@ function handleAttack(ws, sender, recipient, data) {
   const targetCell = recipient.shipBoard?.[row]?.[col];
   const isHit = targetCell !== null;
 
-  // Optional: mark the board visually (but preserve the ship type)
   if (isHit) {
     recipient.shipBoard[row][col] = "X";
   }
@@ -154,11 +156,10 @@ function handleAttack(ws, sender, recipient, data) {
     });
 
     console.log(`Player ${sender.playerNumber} wins!`);
-
-    // Optionally reset gameState here
   }
 }
 
+// This function handles the restart game logic
 function restartGame(ws) {
   console.log("Restarting game...");
 
@@ -179,14 +180,16 @@ function restartGame(ws) {
 }
 
 
+// Function to broadcast message to all players
 function sendMessageToAll({ webSocketServer, ...payload }) {
     webSocketServer.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify(payload));
         }
-      });
+    });
 }
 
+// Function to send message to a specific player
 function sendMessageToPlayer({ ws, ...payload }) {
     ws.send(JSON.stringify(payload));
   }
@@ -199,11 +202,13 @@ const wss = new WebSocket.Server({ port: 8080, perMessageDeflate: false });
 console.log("WebSocket server is running on ws://localhost:8080");
 
 wss.on("connection", (ws) => {
+    // Checks if there is already 2 players connected
     if (gameState.players.length < 2) {
         const usedNumbers = gameState.players.map(p => p.playerNumber);
         const availableNumbers = [1, 2].filter(n => !usedNumbers.includes(n));
         const playerNum = availableNumbers[0];
     
+        // Pushes player to game state
         gameState.players.push({
           playerNumber: playerNum,
           ready: false,
@@ -213,6 +218,7 @@ wss.on("connection", (ws) => {
         console.log(`Player: ${playerNum} connected`);
         gameState.gameStatus = "waiting";
 
+        // Sends a welcome message to the player
         sendMessageToPlayer({
           ws: ws,
           type: "welcome",
@@ -221,6 +227,7 @@ wss.on("connection", (ws) => {
           player: playerNum,
         });
     
+        // Sends a message to all players when game is full and ready
         if (gameState.players.length === 2) {
           sendMessageToAll({
             webSocketServer: wss,
@@ -228,7 +235,9 @@ wss.on("connection", (ws) => {
             type: "ready",
             message: "Ready up"
           });
-        } else {
+        } 
+        // Sends a message if one player is still waiting for another to join
+        else {
           sendMessageToPlayer({
             ws: ws,
             type: "waiting",
